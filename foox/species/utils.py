@@ -43,25 +43,33 @@ def make_generate_function(mutation_range, mutation_rate, cantus_firmus):
         solutions assuming the cantus_firmus and other settings in the closure.
         """
         length = len(seed_generation)
+        new_length = length / 3 + (1 if length % 3 != 0 else 0)
         # Keep the fittest 50%
-        new_generation = seed_generation[:length/2]
+        new_generation = seed_generation[:new_length]
 
         # Breed the remaining 50% using roulette wheel selection
         offspring = []
-        while len(offspring) < length/2:
-            mum = ga.roulette_wheel_selection(seed_generation)
-            dad = ga.roulette_wheel_selection(seed_generation)
+        while len(offspring) < new_length:
+            mum = ga.normalized_roulette_wheel_selection(seed_generation)
+            dad = ga.normalized_roulette_wheel_selection(seed_generation)
             children = mum.breed(dad)
             offspring.extend(children)
 
+        offspring_mutated = []
+        while len(offspring_mutated) < new_length:
+            mum = ga.normalized_roulette_wheel_selection(seed_generation)
+            dad = ga.normalized_roulette_wheel_selection(seed_generation)
+            children = mum.breed(dad)
+            offspring_mutated.extend(children)
+
         # Mutate
-        for genome in offspring:
+        for genome in offspring_mutated:
             genome.mutate(mutation_range, mutation_rate, cantus_firmus)
 
         # Ensure the new generation is the right length
         new_generation.extend(offspring)
+        new_generation.extend(offspring_mutated)
         new_generation = new_generation[:length]
-
         return new_generation
 
     return generate

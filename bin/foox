@@ -8,7 +8,41 @@ import argparse
 import logging
 
 from foox import ga, version, lilypond, words
-from foox.species import first, second, third, fourth
+from foox.species import first, second, third, fourth, fifth
+
+
+def run_ga(population, fitness_function, generate_function, halt_function, reverse):
+    gen = ga.genetic_algorithm(population, fitness_function,
+                              generate_function, halt_function, reverse)
+    counter = 0
+    for generation in gen:
+        counter += 1
+        fitness = generation[0].fitness
+        print "--- Generation %d ---" % counter
+        print generation[0]
+        print fitness
+        fitness_function(generation[0], True)
+    return generation
+
+
+def run_subpopulation_ga(population, fitness_function, generate_function, halt_function, reverse, subpop_amount):
+    part_len = len(population) / subpop_amount
+    subpop = list()
+    for i in range(subpop_amount):
+        if i in [0, 1, 2]:
+            fifth.HSCORE_WEIGHTS[17] = 1.0
+            fifth.HSCORE_WEIGHTS[4] = 4.0
+        else:
+            fifth.HSCORE_WEIGHTS[4] = 1.0
+            fifth.HSCORE_WEIGHTS[17] = 4.0
+        init_pop = population[i * part_len: (i + 1) * part_len]
+        subpop.append(run_ga(init_pop, fitness_function, generate_function, halt_function, reverse))
+        # subpop[-1] = subpop[-1][:part_len / subpop_amount]
+    fifth.HSCORE_WEIGHTS[17] = 1.0
+    final_pop = sum(subpop, [])
+    final_pop.sort(key=fitness_function, reverse = reverse)
+    # final_pop = final_pop[:part_len]
+    return run_ga(final_pop, fitness_function, generate_function, halt_function, reverse)
 
 
 parser = argparse.ArgumentParser(
@@ -35,6 +69,7 @@ if __name__ == '__main__':
     population_size = 1000
     mutation_range = 7
     mutation_rate = 0.4
+    reverse = True
     if species == 1:
         population_size = first.DEFAULT_POPULATION_SIZE
         mutation_range = first.DEFAULT_MUTATION_RANGE
@@ -71,17 +106,17 @@ if __name__ == '__main__':
         generate_function = fourth.make_generate_function(mutation_range,
             mutation_rate, cf)
         halt_function = fourth.make_halt_function(cf)
+    elif species == 5:
+        population_size = fifth.DEFAULT_POPULATION_SIZE
+        mutation_range = fifth.DEFAULT_MUTATION_RANGE
+        mutation_rate = fifth.DEFAULT_MUTATION_RATE
+        start_population = fifth.create_population(population_size, cf)
+        fitness_function = fifth.make_fitness_function(cf)
+        generate_function = fifth.make_generate_function(mutation_range, mutation_rate, cf)
+        halt_function = fifth.make_halt_function(cf)
+        reverse = False
 
-    ga = ga.genetic_algorithm(start_population, fitness_function,
-        generate_function, halt_function)
-    fitness = 0.0
-
-    counter = 0
-    for generation in ga:
-        counter += 1
-        fitness = generation[0].fitness
-        print "--- Generation %d ---" % counter
-        print generation[0]
-        print fitness
+    generation = run_ga(start_population, fitness_function, generate_function, halt_function, reverse)
     with open('%s.ly' % output, 'w') as output:
         output.write(lilypond.render(species, cf, generation[0].chromosome))
+        #output.write(lilypond.render(species, cf, fifth.generate_random(cf)))

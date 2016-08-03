@@ -68,6 +68,10 @@ result = {
 
 # A dictionary that maps numbers to lilypond notes.
 NOTES = {
+    -3: "c",
+    -2: "d",
+    -1: "e",
+    0: "f",
     1: "g",
     2: "a",
     3: "b",
@@ -87,6 +91,12 @@ NOTES = {
     17: "r",
 }
 
+DURATIONS = {
+    8: "1",
+    4: "2",
+    2: "4",
+    1: "8",
+}
 
 def get_cantus_firmus(notes):
     """
@@ -95,7 +105,7 @@ def get_cantus_firmus(notes):
     """
     result = ''
     # Ensure the notes are in range
-    normalised = [note for note in notes if note > 0 and note < 18]
+    normalised = [note for note in notes if -3 <= note < 18]
     if not normalised:
         return result
     # Set the duration against the first note.
@@ -118,7 +128,7 @@ def get_simple_contrapunctus(notes, duration):
     """
     result = ''
     # Ensure the notes are in range
-    normalised = [note for note in notes if note > 0 and note < 18]
+    normalised = [note for note in notes if 0 < note < 18]
     if not normalised:
         return result
     # Set the duration against the first note.
@@ -156,7 +166,7 @@ def get_fourth_species(notes):
     """
     result = ''
     # Ensure the notes are in range
-    normalised = [note for note in notes if note > 0 and note < 18]
+    normalised = [note for note in notes if -3 <= note < 18]
     if not normalised:
         return result
 
@@ -188,6 +198,31 @@ def get_fourth_species(notes):
     return result
 
 
+def get_fifth_species(notes):
+    """
+    Given a representation of the contrapunctus part of fifth species
+    counterpoint in numeric (foox) form, turns it into correct Lilypond
+    notation.
+    """
+    result = ''
+    # Ensure the notes are in range
+    normalised = [note for note in notes if -3 <= note[0] < 18]
+    if not normalised:
+        return result
+
+    body = [[NOTES[note[0]], note[1]] for note in normalised]
+    current_beat = 0
+    for note in body:
+        if current_beat + note[1] > 8:
+            d1 = 8 - current_beat
+            d2 = current_beat + note[1] - 8
+            result += note[0] + DURATIONS[d1] + "~ " + note[0] + DURATIONS[d2] + " "
+        else:
+            result += note[0] + DURATIONS[note[1]] + " "
+        current_beat = (current_beat + note[1]) % 8
+    return result[:-1]
+
+
 def render(species, cantus_firmus, contrapunctus, title='Untitled',
     created_on=None, composer='Anonymous'):
     """
@@ -204,6 +239,8 @@ def render(species, cantus_firmus, contrapunctus, title='Untitled',
         contrapunctus_notes = get_simple_contrapunctus(contrapunctus, duration)
     elif species == 4:
         contrapunctus_notes = get_fourth_species(contrapunctus)
+    elif species == 5:
+        contrapunctus_notes = get_fifth_species(contrapunctus)
 
     context = {}
     context['title'] = title

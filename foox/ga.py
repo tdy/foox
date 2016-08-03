@@ -2,6 +2,7 @@
 Contains code specific to the genetic algorithm.
 """
 import random
+from copy import deepcopy
 
 
 def genetic_algorithm(population, fitness, generate, halt, reverse=True):
@@ -31,7 +32,7 @@ def genetic_algorithm(population, fitness, generate, halt, reverse=True):
     while not halt(current_population, generation_count):
         generation_count += 1
         new_generation = generate(current_population)
-        current_population = sorted(new_generation, key=fitness, reverse=True)
+        current_population = sorted(new_generation, key=fitness, reverse=reverse)
         yield current_population
 
 
@@ -59,8 +60,29 @@ def roulette_wheel_selection(population):
     for genome in population:
         fitness_tally += genome.fitness
         if fitness_tally > random_point:
-            return genome
+            return deepcopy(genome)
 
+def normalized_roulette_wheel_selection(population):
+    fitness_max = population[0].fitness
+    fitness_min = population[-1].fitness
+    if fitness_min != fitness_max:
+        normalized_fitness = map(lambda x: (x.fitness - fitness_min) / (fitness_max - fitness_min), population)
+    else:
+        normalized_fitness = [1.0] * len(population)
+    total_fitness = sum(normalized_fitness)
+
+    random_point = random.uniform(0.0, total_fitness)
+
+    fitness_tally = 0.0
+    for i in range(len(normalized_fitness)):
+        fitness_tally += normalized_fitness[i]
+        if fitness_tally > random_point:
+            return deepcopy(population[i])
+
+
+def power_distribution_selection(population):
+    genome_idx = int((random.uniform(0.0, 1.0) ** 4) * len(population))
+    return deepcopy(population[genome_idx])
 
 def crossover(mum, dad, klass):
     """
